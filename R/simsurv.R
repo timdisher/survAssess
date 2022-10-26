@@ -23,7 +23,7 @@
 #'           ntrial = 25)
 #'
 #' @export
-.simsurv <- function(n){
+.simsurv <- function(n, maturity = c("low","mod","max")){
 
 ############################################################################## #
 ############################################################################## #
@@ -35,6 +35,11 @@
 ############################################################################## #
 ############################################################################## #
 
+  fu.mult <- switch (maturity,
+    low = 0.2,
+    mod = 0.6,
+    full = 1
+  )
 
  ph.aft <- sample(c(TRUE), 1)
  dist <- sample(c("exp", "weibullPH", "gompertz"), 1)
@@ -48,11 +53,13 @@
        fustat = censrec
      )
 
-   maxt = max(dat$futime)
+   maxt = max(dat$futime)*fu.mult
  }
 
  trt <- rbinom(n, 1, 0.5)
  x <- data.frame(trt)
+
+
 
 
 
