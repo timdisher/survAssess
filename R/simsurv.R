@@ -24,7 +24,6 @@
 #'
 #' @export
 .simsurv <- function(n, maturity = c("low","mod","max")){
-
 ############################################################################## #
 ############################################################################## #
 #
@@ -38,11 +37,12 @@
   fu.mult <- switch (maturity,
     low = 0.2,
     mod = 0.6,
-    full = 1
+    max = 1
   )
 
- ph.aft <- sample(c(TRUE), 1)
- dist <- sample(c("exp", "weibullPH", "gompertz"), 1)
+ dist <- sample(c("exp", "weibullPH","weibull", "gompertz"), 1)
+ ph.aft <- ifelse(dist == "exp", FALSE, sample(c(TRUE, FALSE), 1))
+
  dataset <- sample(c("bc"), 1)
 
  if(dataset == "bc"){

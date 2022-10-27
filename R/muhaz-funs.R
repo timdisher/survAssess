@@ -6,8 +6,6 @@
 #' @return A dataframe of smoothed hazards for plotting
 hazplot_dat <- function(trt, control, settings, t_lab, c_lab){
 
-  browser()
-
   plot <- out %>% ggplot2::ggplot(ggplot2::aes(x = time, y = haz, colour = Treatment)) +
     ggplot2::geom_line() +
     ggplot2::coord_cartesian(xlim = c(0,75),
@@ -172,7 +170,7 @@ muhaz_fits <- function(data,
 #'
 #' @export
 .hazard.overlay <- function(mod_type,
-                            model,
+                            fits,
                             muhaz,
                             out,
                             subt,
@@ -209,28 +207,40 @@ muhaz_fits <- function(data,
     dplyr::select(-et) %>%
     dplyr::rename(haz = med) %>%
     dplyr::mutate(Treatment = ifelse(Treatment == 1, t_lab[[2]], t_lab[[1]]),
-                  Treatment = factor(Treatment, levels = t_lab),
-                  type = "Flexible non-parametric (muhaz)")
+                  Treatment = factor(Treatment, levels = t_lab)#,
+                  #type = "Flexible non-parametric (muhaz)"
+                  )
 
 
+ m.haz <- purrr::map_df(names(fits), ~{
+   model <- fits[[.]]
+   m.name <- .
+   mod.haz <- predict(model, newdata = data.frame(trt = c(0, 1)), times = unique(muhaz$time) + 0.01,
+                      type = "hazard") %>%
+     dplyr::pull(.pred) %>%
+     dplyr::bind_rows(.id = "trt") %>%
+     dplyr::mutate(trt = ifelse(trt == 1, t_lab[[1]], t_lab[[2]]),
+                   trt = factor(trt, levels = t_lab),
+                   type = m.name,
+                   lwr = NA,
+                   upr = NA) %>%
+     dplyr::rename(Treatment = trt, haz = .pred_hazard, time = .time)
 
-  mod_haz <- predict(model, newdata = data.frame(trt = c(0, 1)), times = unique(muhaz$time) + 0.01,
-                     type = "hazard") %>%
-    dplyr::pull(.pred) %>%
-    dplyr::bind_rows(.id = "trt") %>%
-    dplyr::mutate(trt = ifelse(trt == 1, t_lab[[1]], t_lab[[2]]),
-                  trt = factor(trt, levels = t_lab),
-                  type = mod_type) %>%
-    dplyr::rename(Treatment = trt, haz = .pred, time = .time) %>%
-    dplyr::bind_rows(muhaz_p)
+   mod.haz
+ })
 
 
-  out_p <- mod_haz %>%
+  out_p <- m.haz %>%
     ggplot2::ggplot(ggplot2::aes(x = time, y = haz, colour = Treatment, linetype = type)) +
     ggplot2::geom_line(size = 1) +
+    ggplot2::facet_wrap(~type) +
     estools::scale_colour_es(sel = c(1,2)) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = lwr,x = time, ymax = upr, y = haz, group = Treatment, fill = Treatment),alpha = 0.2, data = muhaz_p) +
-    estools::scale_fill_es(sel = c(1,2)) +
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = lwr,x = time, ymax = upr, y = haz, group = Treatment, fill = Treatment),alpha = 0.2, data = muhaz_p,
+                         inherit.aes = FALSE,
+                         fill = "black") +
+    ggplot2::geom_line(ggplot2::aes(x = time, y = haz, group = Treatment, colour = "Flexible non-parametric hazard"),colour = "black",
+                       alpha = 1, data = muhaz_p,
+                         inherit.aes = FALSE) +
     ggplot2::theme_minimal(base_size = basesize) +
     ggplot2::labs(x = "Time", y = "Hazard", linetype = "Model Type",
                   title = glue::glue("Modeled vs Non-parametrically smoothed hazards {out}"),
@@ -238,40 +248,6 @@ muhaz_fits <- function(data,
     ggplot2::scale_x_continuous(breaks = breaks) +
     ggplot2::coord_cartesian(xlim = c(0, mt))
 
-
-
-
-  if(risk_tab){
-
-    km_sum <- summary(survfit, times = breaks, extend = TRUE)
-    risk_table <- lapply(c("time", "n.risk", "strata") , function(x) km_sum[x]) %>%
-      do.call(data.frame, .) %>%
-      dplyr::mutate(strata = ifelse(strata == "trt=0", t_lab[[1]], t_lab[[2]]),
-                    strata = factor(strata, levels = rev(t_lab)))
-
-
-
-    out_p <- out_p + ggplot2::labs(x = ggplot2::element_blank()) # Remove xlab from upper plot
-
-    rt_p_strata <- risk_table  %>%
-      ggplot2::ggplot(ggplot2::aes(x = time, y = strata, label = n.risk)) +
-      ggplot2::geom_text(size = textsize,ggplot2::aes(colour = strata), show.legend = FALSE) +
-      ggplot2::scale_color_manual(values = estools::es_pal(sel = c(2, 1))) +
-      ggplot2::theme_minimal(base_size = basesize) +
-      ggplot2::coord_cartesian(xlim = c(0, 60)) +
-      ggplot2::labs(y = "No. at Risk", x = xlab) +
-      ggplot2::scale_x_continuous(breaks = breaks) +
-      ggplot2::coord_cartesian(xlim = c(0, mt))
-
-    comb <- cowplot::plot_grid(out_p, rt_p_strata, align = "v", ncol = 1, rel_heights = c(0.75, 0.25),
-                               axis = "rl")
-
-    return(cowplot::ggdraw(cowplot::add_sub(comb, "*Smoothed hazards restricted to timepoints with at least 10 patients at risk")) )
-
-
-
-
-  }
 
   return(out_p + ggplot2::labs(caption = "*Smoothed hazards restricted to timepoints with at least 10 patients at risk"))
 
@@ -303,7 +279,7 @@ muhaz_fits <- function(data,
 .muhaz.pehaz.plot <- function(muhaz,
                               pehaz,
                               out,
-                              subt,
+                              subt = "",
                               survfit = surv_os,
                               risk_tab = FALSE,
                               breaks = 4,

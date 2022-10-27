@@ -17,7 +17,7 @@
 #'  Put some examples of how it works or just delete this
 #'
 #' @export
-.test.ph.aft <- function(data, nbreaks = 10){
+.test.ph.aft <- function(dat){
 
 
   ############################################################################## #
@@ -98,6 +98,7 @@
       dplyr::arrange(AIC)
 
     out <- dplyr::lst(fits = aic_comp,
+                      zph.plot,
                       all.mods)
 
     return(out)
@@ -188,7 +189,7 @@
 
 
 
-    loglog <- p$plot$data %>%
+    loglog_gomp <- p$plot$data %>%
       dplyr::filter(time != 0) %>%
       dplyr::mutate(surv = log(-log(surv))) %>%
       ggplot2::ggplot(ggplot2::aes(x = time, y = surv, colour = strata)) +
@@ -196,13 +197,43 @@
       ggplot2::scale_color_manual(values = cols, name = "Treatment",
                                   labels = c("Control", "Treatment")) +
       ggplot2::theme_minimal(base_size = 18) +
-      ggplot2::scale_x_continuous(trans = "log", labels = function(x) round(x,2)) +
       ggplot2::labs(y = "Log Cumulative Hazard",
-                    x = "Time (log scale)",
-                    title = glue::glue("Log Cumulative Hazard vs Log Time for"))
+                    x = "Time (linear scale)",
+                    title = "Log Cumulative Hazard  vs Time for assessment of Gompertz")
 
 
-    dplyr::lst(loglog, km = p)
+    loglog_weib <- loglog_gomp +
+      ggplot2::scale_x_continuous(trans = "log", labels = function(x) round(x,2)) +
+      ggplot2::labs(x = "Time (log scale)",
+                    y = "Log Cumulative Hazard",
+                    title = "Log-log Plot for assessment of Weibull")
+
+
+    quant_dat <- quantile(m, probs = seq(from = 0, to = 1, by = 0.01), conf.int = FALSE)  %>%
+      t() %>%
+      as.data.frame() %>%
+      tidyr::drop_na() %>%
+      purrr::set_names("control", "trt") %>%
+      tibble::rownames_to_column("quantile")
+
+    m1 <- lm(trt ~ control, data = quant_dat)
+
+    aft_plot <- quant_dat %>%
+      ggplot2::ggplot(ggplot2::aes(x = control, y = trt)) +
+      ggplot2::geom_point(size = 2, colour = cols[[1]]) +
+      ggplot2::geom_smooth(method = "lm", se = FALSE, colour =cols[[2]]) +
+      ggplot2::labs(caption = glue::glue("Estimated accelaration factor (line slope) = {round(coef(m1)[[2]], 2)}"),
+                    y = "Percentile for Control",
+                    x = "Percentile for Treatment",
+                    title = "Q-Q Plot for assessment of constant acceleration factor") +
+      ggplot2::theme_minimal(base_size = 16)
+
+
+    dplyr::lst(km = p,
+               loglog_gomp,
+               loglog_weib,
+               aft_plot,
+               overlay)
 }
 
 
@@ -220,8 +251,7 @@
 #'  Put some examples of how it works or just delete this
 #'
 #' @export
-.smooth.haz<- function(dat, nbreaks = 10){
-
+.smooth.haz<- function(dat,fits, nbreaks = 10, include){
   cols <- c("#002F6C", "#ED8B00")
   tlabs <- c("Control", "Treatment")
   m <- survival::survfit(survival::Surv(futime, fustat) ~ trt, data = dat)
@@ -275,7 +305,7 @@
 
   muhaz_ol_p <- .hazard.overlay(
     mod_type = "Weibull",
-    model = weib,
+    fits = fits[include],
     muhaz = muhaz_bws,
     out = "Survival",
     subt = "",
@@ -285,6 +315,14 @@
     textsize = 8,
     basesize = 18,
     xlab = "Time"
+  )
+
+
+
+  dplyr::lst(
+    muhaz_ol_p,
+    muhaz_pw_plot,
+
   )
 
 }
