@@ -259,8 +259,7 @@ if(ph.aft | dist == "exp"){
  dplyr::lst(
   dat = dat.out,
   dist,
-  ph.aft,
-  m, m.c, m.t
+  ph.aft
   )
 
 

@@ -30,7 +30,7 @@
   ############################################################################## #
   ############################################################################## #
 
-
+cols <- c("#002F6C", "#ED8B00")
     ############################################################################## #
     ############################################################################## #
     #
@@ -160,7 +160,6 @@
   pred <- function(fit, model){
 
     p <-  predict(fit, times = seq(from = 0.01, to = max(p$plot$data$time), length.out = 30), newdata  = data.frame(trt = c(0, 1)), type = "survival")
-
     rbind(p[[1]][[1]] %>% dplyr::mutate(trt = 0),
           p[[1]][[2]] %>% dplyr::mutate(trt = 1)) %>%
       dplyr::rename(time = .time,
@@ -173,9 +172,9 @@
 
   preds <- purrr::map_df(include, ~{
     model <- .
-    pred(all.mods[[model]], model)
+    pred(fits[[model]], model)
   })
-  pred(all.mods$`exp - Joint`, "exp")
+
     overlay <- preds %>%
       ggplot2::ggplot(ggplot2::aes(x = time, y = surv, colour = factor(trt))) +
       ggplot2::geom_line(size = 1) +

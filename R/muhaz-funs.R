@@ -10,7 +10,7 @@ hazplot_dat <- function(trt, control, settings, t_lab, c_lab){
     ggplot2::geom_line() +
     ggplot2::coord_cartesian(xlim = c(0,75),
                              ylim = c(0, 0.05)) +
-    estools::scale_colour_es(sel = c(1,2)) +
+    ggplot2::scale_colour_es(values = c("#002F6C", "#ED8B00")) +
     ggplot2::theme_minimal() +
     ggplot2::scale_x_continuous(breaks = seq(from = 0, to = 75, by = 5)) +
     ggplot2::labs(y = "Hazard",
@@ -40,7 +40,7 @@ muhaz_fits <- function(data,
                        event_var = "out_os_event",
                        time_var = "out_os_time",
                        nsamp = 1) {
-
+  cols <- c("#002F6C", "#ED8B00")
   if(! "trt" %in% colnames(data)) stop("Code requires a treatment variable named 'trt'")
   if(any(!data$trt %in% c(0,1))) stop("trt must be a numeric variable with values 0/1 only")
   if(! is.numeric(data[[time_var]])) stop("timevar must be numeric")
@@ -234,7 +234,7 @@ muhaz_fits <- function(data,
     ggplot2::ggplot(ggplot2::aes(x = time, y = haz, colour = Treatment, linetype = type)) +
     ggplot2::geom_line(size = 1) +
     ggplot2::facet_wrap(~type) +
-    estools::scale_colour_es(sel = c(1,2)) +
+    ggplot2::scale_colour_manual(values =  c("#002F6C", "#ED8B00")) +
     ggplot2::geom_ribbon(ggplot2::aes(ymin = lwr,x = time, ymax = upr, y = haz, group = Treatment, fill = Treatment),alpha = 0.2, data = muhaz_p,
                          inherit.aes = FALSE,
                          fill = "black") +
@@ -325,10 +325,10 @@ muhaz_fits <- function(data,
   out_p <- pehaz_p %>%
     ggplot2::ggplot(ggplot2::aes(x = time, y = haz, colour = Treatment, linetype = type)) +
     ggplot2::geom_step(size = 1) +
-    estools::scale_colour_es(sel = c(1,2)) +
+    ggplot2::scale_colour_manual(values = c("#002F6C", "#ED8B00")) +
     ggplot2::geom_line(data = muhaz_p) +
     ggplot2::geom_ribbon(ggplot2::aes(ymin = lwr,x = time, ymax = upr, y = haz, group = Treatment, fill = Treatment),alpha = 0.2, data = muhaz_p) +
-    estools::scale_fill_es(sel = c(1,2)) +
+    ggplot2::scale_fill_manual(values = c("#002F6C", "#ED8B00")) +
     ggplot2::theme_minimal(base_size = basesize) +
     ggplot2::labs(x = "Time", y = "Hazard", linetype = "Model Type",
                   title = glue::glue("Piecewise vs Non-parametrically smoothed hazards {out}"),
@@ -354,7 +354,7 @@ muhaz_fits <- function(data,
     rt_p_strata <- risk_table  %>%
       ggplot2::ggplot(ggplot2::aes(x = time, y = strata, label = n.risk)) +
       ggplot2::geom_text(size = textsize,ggplot2::aes(colour = strata), show.legend = FALSE) +
-      ggplot2::scale_color_manual(values = estools::es_pal(sel = c(2, 1))) +
+      ggplot2::scale_color_manual(values = c("#002F6C", "#ED8B00")) +
       ggplot2::theme_minimal(base_size = basesize) +
       ggplot2::coord_cartesian(xlim = c(0, 60)) +
       ggplot2::labs(y = "No. at Risk", x = xlab) +
