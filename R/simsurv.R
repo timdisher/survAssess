@@ -52,7 +52,7 @@
        futime =recyrs,
        fustat = censrec
      )
-
+   maxt.mature = max(dat$futime)
    maxt = max(dat$futime)*fu.mult
  }
 
@@ -259,7 +259,8 @@ if(ph.aft | dist == "exp"){
  dplyr::lst(
   dat = dat.out,
   dist,
-  ph.aft
+  ph.aft,
+  maxt.mature
   )
 
 

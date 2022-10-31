@@ -73,8 +73,8 @@ muhaz_fits <- function(data,
 
 
 
-    haztreat = with(t_samp, muhaz::muhaz(time_var, event_var, max.time = ts$time[max(cumsum(ts$n.risk >= 10))]))
-    hazcontrol = with(c_samp, muhaz::muhaz(time_var, event_var, max.time = cs$time[max(cumsum(cs$n.risk >= 10))]))
+    haztreat = with(t_samp, muhaz::muhaz(time_var, event_var,min.time = 0, max.time = ts$time[max(cumsum(ts$n.risk >= 10))]))
+    hazcontrol = with(c_samp, muhaz::muhaz(time_var, event_var,min.time = 0, max.time = cs$time[max(cumsum(cs$n.risk >= 10))]))
 
     t_df <-data.frame(haz = haztreat$haz.est,time = haztreat$est.grid, Treatment = 1)
     c_df <- data.frame(haz = hazcontrol$haz.est,time = hazcontrol$est.grid, Treatment = 0)

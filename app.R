@@ -1,29 +1,65 @@
 
-ui <- dashboardPage(
-  dashboardHeader(title = "Assess Survival"),
+ui <- dashboardPage(skin = "black",
+  dashboardHeader(
+    shiny::tags$li(
+      class = "dropdown",
+      shiny::tags$style(".main-header {max-height: 150px;}"),
+      shiny::tags$style(".main-header .logo {min-height: 55px;}"),
+      shiny::tags$style(".sidebar-toggle {height: 20px; padding-top: 1px;}"),
+      shiny::tags$style(".navbar {min-height: 50px;}")
+    ),
+
+    title = shiny::tags$img(src = "Eversana_Logo_H_RGB.png", height = 50, width = 214.3, align = "middle")
+    ),
   dashboardSidebar(
    disable = TRUE ),
   dashboardBody(
     shinyalert::useShinyalert(),
+    shiny::tags$style('.nav-tabs-custom .nav-tabs li.active {
+    border-top-color: #ED8B00;
+}'),
+
+    shiny::tags$head(shiny::tags$style(shiny::HTML('
+
+                            .col-sm-12 {
+                            padding: 0px;
+                            }
+
+                            .col-sm-6 {
+                            padding: 0px;
+                            }
+
+                            .tab-content {
+                            passing: 0px;
+                            }'))),
+
+    format_edits(),
     # Boxes need to be put in a row (or column)
     fluidPage(
+
     fluidRow(
-      box(shiny::numericInput("n.sim",
+      column(box(title = "Data Simulation",
+        solidHeader = TRUE, shiny::numericInput("n.sim",
                               min = 100,
                               max = 10000,
                               value = 150,
                               step = 25,
-                              label = "Number of patients"),
+                              label = "Number of patients (per arm)"),
           shiny::selectInput("mat", label = "Maturity of Data",
                              choices = c("Low" = "low",
                                          "Moderate" = "mod",
                                          "Max" = "max"),
                              selected = "max"),
           hr(),
-          actionButton("go", "Simulate Data")
+          actionButton("go", "Simulate Data"),
+        height = "20em",
+        width = 11
 
-      ),
-      box(
+      ), width = 6),
+      column(box(title = "Guess Distrubution",
+          solidHeader = TRUE,
+          height = "20em",
+          width = 11,
         shiny::selectInput("guess.dist", label = "Guess for distribution",
                            choices = c( "exp","weibull", "weibullPH", "gompertz",
                                                   "gamma", "llogis", "lnorm"),
@@ -36,7 +72,7 @@ ui <- dashboardPage(
         hr(),
 
         shiny::actionButton("guess", label = "Make Guess")
-      ),
+      ),width = 6),
       tabBox(
        width = 12,
         tabPanel("KM",plotOutput("plot", height = "700px")),
@@ -44,7 +80,7 @@ ui <- dashboardPage(
        tabPanel("QQ Plots", plotOutput("qq", height = "700px")),
        tabPanel("Smoothed hazards", plotOutput("smooth", height = "700px")),
        tabPanel("Schoenfeld residuals test and plot", plotOutput("zph", height = "700px")),
-       tabPanel("Parametric Fits", tableOutput("fit.tab")),
+       tabPanel("Parametric Fits", DT::DTOutput("fit.tab")),
        tabPanel("Parametric Fits vs KM",  plotOutput("par.km", height = "700px")),
        tabPanel("Parametric Fits vs Smoothed Hazards", plotOutput("par.smooth", height = "700px")),
        tabPanel("About",
@@ -76,6 +112,7 @@ ui <- dashboardPage(
 server <- function(input, output) {
   ## app.R ##
   library(shinydashboard)
+
   library(dplyr)
   library(ggplot2)
   library(patchwork)
@@ -84,10 +121,23 @@ server <- function(input, output) {
   library(survminer)
   library(shinyalert)
   library(muhaz)
+  library(shinyvalidate)
 
   lapply(list.files("./R"), function(x) source(paste0("./R/", x)))
 
+  iv <- InputValidator$new()
+  iv$add_rule("n.sim", sv_between(50, 10000))
+  iv$enable()
+
   res <- eventReactive(input$go, {
+
+    if (!iv$is_valid()) {
+      showNotification(
+        "Please fix the errors in the form before continuing",
+        type = "warning"
+      )
+    } else {
+
 
     shinyalert::shinyalert(text = "Simulating Data", closeOnEsc = FALSE, type = "info",
                            showConfirmButton = FALSE)
@@ -95,20 +145,34 @@ server <- function(input, output) {
     dat <- .simsurv(n = input$n.sim, maturity = input$mat)
 
 
-    tests <- .test.ph.aft(dat$dat)
-  plot <- .km.plots(fits = tests$all.mods,
+    tests <- try(.test.ph.aft(dat$dat))
+  plot <- try(.km.plots(fits = tests$all.mods,
                                                   dat = dat$dat,
-                                                  include = names(tests$all.mods))
+                                                  include = names(tests$all.mods),
+                    maxt.mature = dat$maxt.mature))
 
 
-  sm.haz.p <- .smooth.haz(
+  sm.haz.p <- try(.smooth.haz(
     dat = dat$dat,
     nbreaks = 10,
     fits = tests$all.mods,
     include = names(tests$all.mods)
-  )
+  ))
+
+  if(any(class(tests) == "try-error",
+         class(plot) == "try-error",
+         class(sm.haz.p) == "try-error")){
+    shinyalert::closeAlert()
+    shinyalert(title = "Not enough data for tests. Try larger number of patients or more mature data",
+               type = "error"
+               )
+
+    return()
+  }
+
   shinyalert::closeAlert()
     dplyr::lst(dat, tests, plot, sm.haz.p)
+    }
   })
 
 
@@ -143,9 +207,25 @@ server <- function(input, output) {
     res()$tests$zph.plot
   })
 
-  output$fit.tab <- renderTable({
-    res()$tests$fits
-  })
+  output$fit.tab <-
+    DT::renderDataTable({res()$tests$fits %>% dplyr::mutate_if(is.numeric, round, 2)},
+                        #filter = "top",
+                        # # allow navigating through table with arrows
+                        # extensions = 'KeyTable', options = list(keys = TRUE),
+                        # save option
+                        extensions = 'Buttons', options = list(
+                          paging = FALSE,
+                          dom = 'Bfrtip',
+                          #scrollX = TRUE,
+                          #scrollY = "200px",
+                          initComplete = DT::JS(
+                            "function(settings, json) {",
+                            "$(this.api().table().header()).css({'background-color': '#00549E', 'color': '#fff'});",
+                            "}")
+                        )
+    )
+
+
 
   output$par.km <- renderPlot({
     res()$plot$overlay

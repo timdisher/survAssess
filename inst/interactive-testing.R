@@ -1,12 +1,21 @@
-dat <- .simsurv(n = 100, maturity = "max")
+
+lapply(list.files("./R"), function(x) source(paste0("./R/",x)))
+
+dat <- .simsurv(n = 100, maturity = "low")
 
 
 tests <- .test.ph.aft(dat$dat)
 
 
-plots <- .km.plots(fits = tests$all.mods,
+plots <- try(.km.plots(fits = tests$all.mods,
                    dat = dat$dat,
-                   include = names(tests$all.mods))
+                   include = names(tests$all.mods),
+                   maxt.mature = dat$maxt.mature))
+
+
+
+plots$overlay
+
 
 sm.haz.p <- .smooth.haz(
   dat = dat$dat,

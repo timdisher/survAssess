@@ -121,7 +121,7 @@ cols <- c("#002F6C", "#ED8B00")
 #'  Put some examples of how it works or just delete this
 #'
 #' @export
-.km.plots <- function(fits,dat,include){
+.km.plots <- function(fits,dat,include, maxt.mature){
 
 
   ############################################################################## #
@@ -143,6 +143,7 @@ cols <- c("#002F6C", "#ED8B00")
                              pval = TRUE,
                              data = dat)
 
+
   p$plot <- p$plot +
     ggplot2::scale_fill_manual(values = cols) +
     ggplot2::scale_color_manual(values = cols, name = "Treatment",
@@ -159,7 +160,7 @@ cols <- c("#002F6C", "#ED8B00")
 
   pred <- function(fit, model){
 
-    p <-  predict(fit, times = seq(from = 0.01, to = max(p$plot$data$time), length.out = 30), newdata  = data.frame(trt = c(0, 1)), type = "survival")
+    p <-  predict(fit, times = seq(from = 0.01, to = maxt.mature, length.out = 30), newdata  = data.frame(trt = c(0, 1)), type = "survival")
     rbind(p[[1]][[1]] %>% dplyr::mutate(trt = 0),
           p[[1]][[2]] %>% dplyr::mutate(trt = 1)) %>%
       dplyr::rename(time = .time,
@@ -177,15 +178,14 @@ cols <- c("#002F6C", "#ED8B00")
 
     overlay <- preds %>%
       ggplot2::ggplot(ggplot2::aes(x = time, y = surv, colour = factor(trt))) +
-      ggplot2::geom_line(size = 1) +
-      ggplot2::geom_step(data = p$plot$data,ggplot2::aes(x = time, y = surv, group = trt, colour = "KM"), inherit.aes = FALSE, size = 0.5) +
+      ggplot2::geom_line(size = 0.5, linetype = 1, alpha = 0.8) +
+      ggplot2::geom_step(data = p$plot$data,ggplot2::aes(x = time, y = surv, group = trt, colour = "KM"), inherit.aes = FALSE, size = 1) +
       ggplot2::facet_wrap(~ model) +
       ggplot2::theme_minimal(base_size = 18) +
       ggplot2::scale_color_manual(values = c(cols, "black"), labels = c("Control", "Treatment", "KM"),
                                   name = "Treatment") +
       ggplot2::labs(y = "Survival", x = "Time",
                     title = glue::glue("Parametric Fits vs KM"))
-
 
 
     loglog_gomp <- p$plot$data %>%
