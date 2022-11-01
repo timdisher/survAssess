@@ -41,7 +41,7 @@
   )
 
  dist <- sample(c("exp", "weibullPH","weibull", "gompertz"), 1)
- ph.aft <- ifelse(dist == "exp", FALSE, sample(c(TRUE, FALSE), 1))
+ ph.aft <- ifelse(dist == "exp", TRUE, sample(c(TRUE, FALSE), 1))
 
  dataset <- sample(c("bc"), 1)
 
@@ -220,8 +220,8 @@ if(ph.aft | dist == "exp"){
        fustat = 1,
        trt = x$trt) %>%
        dplyr::mutate(cen = ifelse(futime > maxt, 1, 0),
-                     futime2 = ifelse(cen, maxt, futime),
-                     fustat2 = ifelse(cen, 0, 1))
+                     futime = ifelse(cen, maxt, futime),
+                     fustat = ifelse(cen, 0, 1))
 
 
    } else{

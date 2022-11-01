@@ -56,7 +56,7 @@ ui <- dashboardPage(skin = "black",
         width = 11
 
       ), width = 6),
-      column(box(title = "Guess Distrubution",
+      column(box(title = "Guess Distribution",
           solidHeader = TRUE,
           height = "20em",
           width = 11,

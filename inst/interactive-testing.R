@@ -1,7 +1,7 @@
 
 lapply(list.files("./R"), function(x) source(paste0("./R/",x)))
 
-dat <- .simsurv(n = 100, maturity = "low")
+dat <- .simsurv(n = 150, maturity = "low")
 
 
 tests <- .test.ph.aft(dat$dat)
@@ -15,7 +15,7 @@ plots <- try(.km.plots(fits = tests$all.mods,
 
 
 plots$overlay
-
+dat$dat %>% View()
 
 sm.haz.p <- .smooth.haz(
   dat = dat$dat,

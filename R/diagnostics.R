@@ -178,8 +178,8 @@ cols <- c("#002F6C", "#ED8B00")
 
     overlay <- preds %>%
       ggplot2::ggplot(ggplot2::aes(x = time, y = surv, colour = factor(trt))) +
-      ggplot2::geom_line(size = 0.5, linetype = 1, alpha = 0.8) +
-      ggplot2::geom_step(data = p$plot$data,ggplot2::aes(x = time, y = surv, group = trt, colour = "KM"), inherit.aes = FALSE, size = 1) +
+      ggplot2::geom_step(data = p$plot$data,ggplot2::aes(x = time, y = surv, group = trt, colour = "KM"), inherit.aes = FALSE, alpha = 0.7, size = 1) +
+      ggplot2::geom_line(size = 0.5, linetype = 2, alpha = 0.8) +
       ggplot2::facet_wrap(~ model) +
       ggplot2::theme_minimal(base_size = 18) +
       ggplot2::scale_color_manual(values = c(cols, "black"), labels = c("Control", "Treatment", "KM"),
